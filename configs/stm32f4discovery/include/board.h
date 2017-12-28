@@ -366,4 +366,10 @@
 
 #define DMAMAP_SDIO DMAMAP_SDIO_1
 
+/* DMA channels *************************************************************/
+  /* ADC */
+  
+#  define ADC1_DMA_CHAN DMACHAN_ADC1     /* DMA1_CH1 */
+#  define ADC2_DMA_CHAN DMACHAN_ADC2_1   /* DMA1_CH2 */
+
 #endif  /* __CONFIG_STM32F4DISCOVERY_INCLUDE_BOARD_H */
