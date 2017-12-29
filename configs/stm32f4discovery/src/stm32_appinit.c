@@ -95,4 +95,37 @@ int board_app_initialize(uintptr_t arg)
 
   return stm32_bringup();
 #endif
+	
+/********************** SETUP_ADC ****************/
+	
+#ifdef CONFIG_ADC
+  /* Initialize ADC and register the ADC driver. */
+
+  ret = stm32_adc_setup();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: stm32_adc_setup failed: %d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_DAC
+  /* Initialize DAC and register the DAC driver. */
+
+  ret = stm32_dac_setup();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: stm32_dac_setup failed: %d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_COMP
+  /* Initialize COMP and register the COMP driver. */
+
+  ret = stm32_comp_setup();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: stm32_comp_setup failed: %d\n", ret);
+    }
+#endif
+
 }
