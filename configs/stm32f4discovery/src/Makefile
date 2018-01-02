@@ -182,4 +182,8 @@ CSRCS += stm32_netinit.c
 endif
 endif
 
+ifeq ($(CONFIG_ADC),y)
+CSRCS += stm32_adc.c
+endif
+
 include $(TOPDIR)/configs/Board.mk

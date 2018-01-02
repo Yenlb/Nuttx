@@ -39,6 +39,9 @@
 
 #include <nuttx/config.h>
 
+#include <sys/types.h>
+#include <syslog.h>
+
 #include <nuttx/board.h>
 
 #include "stm32f4discovery.h"
@@ -82,21 +85,11 @@
 
 int board_app_initialize(uintptr_t arg)
 {
+	int ret;
+	
 #ifdef CONFIG_SENSORS_BMP180
   stm32_bmp180initialize("/dev/press0");
 #endif
-
-#ifdef CONFIG_BOARD_INITIALIZE
-  /* Board initialization already performed by board_initialize() */
-
-  return OK;
-#else
-  /* Perform board-specific initialization */
-
-  return stm32_bringup();
-#endif
-	
-/********************** SETUP_ADC ****************/
 	
 #ifdef CONFIG_ADC
   /* Initialize ADC and register the ADC driver. */
@@ -108,24 +101,14 @@ int board_app_initialize(uintptr_t arg)
     }
 #endif
 
-#ifdef CONFIG_DAC
-  /* Initialize DAC and register the DAC driver. */
+#ifdef CONFIG_BOARD_INITIALIZE
+  /* Board initialization already performed by board_initialize() */
 
-  ret = stm32_dac_setup();
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: stm32_dac_setup failed: %d\n", ret);
-    }
-#endif
+  return OK;
+#else
+  /* Perform board-specific initialization */
 
-#ifdef CONFIG_COMP
-  /* Initialize COMP and register the COMP driver. */
-
-  ret = stm32_comp_setup();
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: stm32_comp_setup failed: %d\n", ret);
-    }
+  return stm32_bringup();
 #endif
 
 }
