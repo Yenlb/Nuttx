@@ -1,5 +1,6 @@
 /************************************************************************************
  * configs/nucleo-f410rb/src/stm32_adc.c
+ * => configs/stm32f4discovery/src/stm32_adc.c
  *
  *   Copyright (C) 2017 Gwenhael Goavec-Merou. All rights reserved.
  *   Author: Gwenhael Goavec-Merou <gwenhael.goavec@trabucayre.com>
@@ -70,25 +71,29 @@
  ************************************************************************************/
 /* Identifying number of each ADC channel. */
 
+//arch/arm/src/stm32/chip/stm32f40xxx_pinmap.h
+//#define GPIO_ADC1_IN8         (GPIO_ANALOG|GPIO_PORTB|GPIO_PIN0)
+//#define GPIO_ADC1_IN9         (GPIO_ANALOG|GPIO_PORTB|GPIO_PIN1)
+
 #ifdef CONFIG_STM32_ADC1_DMA
 /* ADC_IN0 and ADC_IN1 */
 
-static const uint8_t  g_adc1_chanlist[ADC1_NCHANNELS] = {9, 8};
+static const uint8_t  g_adc1_chanlist[ADC1_NCHANNELS] = {8, 9};
 
 /* Configurations of pins used byte each ADC channels */
 
-static const uint32_t g_adc1_pinlist[ADC1_NCHANNELS]  = {GPIO_ADC1_IN9, GPIO_ADC1_IN8};
+static const uint32_t g_adc1_pinlist[ADC1_NCHANNELS]  = {GPIO_ADC1_IN8, GPIO_ADC1_IN9};
 
 #else
 /* Without DMA, only a single channel can be supported */
 
 /* ADC_IN0 */
 
-static const uint8_t  g_adc1_chanlist[ADC1_NCHANNELS] = {9};
+static const uint8_t  g_adc1_chanlist[ADC1_NCHANNELS] = {8};
 
 /* Configurations of pins used byte each ADC channels */
 
-static const uint32_t g_adc1_pinlist[ADC1_NCHANNELS]  = {GPIO_ADC1_IN9};
+static const uint32_t g_adc1_pinlist[ADC1_NCHANNELS]  = {GPIO_ADC1_IN8};
 
 #endif /* CONFIG_STM32_ADC1_DMA */
 
