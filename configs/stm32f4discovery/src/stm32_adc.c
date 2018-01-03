@@ -1,9 +1,8 @@
-/****************************************************************************
- * configs/nucleo-f334r8/src/stm32_adc.c
- * configs/stm32f4discovery/src/stm32_adc.c
+/************************************************************************************
+ * configs/nucleo-f410rb/src/stm32_adc.c
  *
- *   Copyright (C) 2017 Gregory Nutt. All rights reserved.
- *   Author: Mateusz Szafoni <raiden00@railab.me>
+ *   Copyright (C) 2017 Gwenhael Goavec-Merou. All rights reserved.
+ *   Author: Gwenhael Goavec-Merou <gwenhael.goavec@trabucayre.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,143 +31,70 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- ****************************************************************************/
+ ************************************************************************************/
 
-/****************************************************************************
+/************************************************************************************
  * Included Files
- ****************************************************************************/
+ ************************************************************************************/
 
 #include <nuttx/config.h>
 
-#include <stdbool.h>
 #include <errno.h>
 #include <debug.h>
 
 #include <nuttx/board.h>
 #include <nuttx/analog/adc.h>
+#include <arch/board/board.h>
 
-#include "stm32.h"
+#include "chip.h"
+#include "up_arch.h"
 
-#if defined(CONFIG_ADC) && (defined(CONFIG_STM32_ADC1) || defined(CONFIG_STM32_ADC2))
+#include "stm32f4discovery.h"
 
-/****************************************************************************
+#ifdef CONFIG_STM32_ADC1
+
+/************************************************************************************
  * Pre-processor Definitions
- ****************************************************************************/
-
-/* Configuration ************************************************************/
-
-/* 1 or 2 ADC devices (DEV1, DEV2) */
-
-#if defined(CONFIG_STM32_ADC1)
-#  define DEV1_PORT 1
-#endif
-
-#if defined(CONFIG_STM32_ADC2)
-#  if defined(DEV1_PORT)
-#    define DEV2_PORT 2
-#  else
-#    define DEV1_PORT 2
-#  endif
-#endif
+ ************************************************************************************/
 
 /* The number of ADC channels in the conversion list */
-/* TODO DMA */
 
-#define ADC1_NCHANNELS 3
-#define ADC2_NCHANNELS 3
+#ifdef CONFIG_STM32_ADC1_DMA
+#  define ADC1_NCHANNELS 2
+#else
+#  define ADC1_NCHANNELS 1
+#endif
 
-/****************************************************************************
- * Private Function Prototypes
- ****************************************************************************/
-
-/****************************************************************************
+/************************************************************************************
  * Private Data
- ****************************************************************************/
+ ************************************************************************************/
+/* Identifying number of each ADC channel. */
 
-/* DEV 1 */
+#ifdef CONFIG_STM32_ADC1_DMA
+/* ADC_IN0 and ADC_IN1 */
 
-#if DEV1_PORT == 1
+static const uint8_t  g_adc1_chanlist[ADC1_NCHANNELS] = {9, 8};
 
-#define DEV1_NCHANNELS ADC1_NCHANNELS
+/* Configurations of pins used byte each ADC channels */
 
-/* Identifying number of each ADC channel (even if NCHANNELS is less ) */
+static const uint32_t g_adc1_pinlist[ADC1_NCHANNELS]  = {GPIO_ADC1_IN9, GPIO_ADC1_IN8};
 
-static const uint8_t g_chanlist1[3] =
-{
-  1,
-  2,
-  11
-};
+#else
+/* Without DMA, only a single channel can be supported */
 
-/* Configurations of pins used by each ADC channel */
+/* ADC_IN0 */
 
-static const uint32_t g_pinlist1[3]  =
-{
-  GPIO_ADC1_IN1,                /* PA0/A0 */
-  GPIO_ADC1_IN2,                /* PA1/A1 */
-  GPIO_ADC1_IN11,               /* PB0/A3 */
-};
+static const uint8_t  g_adc1_chanlist[ADC1_NCHANNELS] = {9};
 
-#elif DEV1_PORT == 2
+/* Configurations of pins used byte each ADC channels */
 
-#define DEV1_NCHANNELS ADC2_NCHANNELS
+static const uint32_t g_adc1_pinlist[ADC1_NCHANNELS]  = {GPIO_ADC1_IN9};
 
-/* Identifying number of each ADC channel */
+#endif /* CONFIG_STM32_ADC1_DMA */
 
-static const uint8_t g_chanlist1[3] =
-{
-  1,
-  6,
-  7
-};
-
-/* Configurations of pins used by each ADC channel */
-
-static const uint32_t g_pinlist1[3] =
-{
-  GPIO_ADC2_IN1,                /* PA4/A2 */
-  GPIO_ADC2_IN7,                /* PC1/A4 */
-  GPIO_ADC2_IN6,                /* PC0/A5 */
-};
-
-#endif  /* DEV1_PORT == 1 */
-
-#ifdef DEV2_PORT
-
-/* DEV 2 */
-
-#if DEV2_PORT == 2
-
-#define DEV2_NCHANNELS ADC2_NCHANNELS
-
-/* Identifying number of each ADC channel */
-
-static const uint8_t g_chanlist2[1] =
-{
-  1,
-  6,
-  7
-};
-
-/* Configurations of pins used by each ADC channel */
-
-static const uint32_t g_pinlist2[3] =
-{
-  GPIO_ADC2_IN1,                /* PA4/A2 */
-  GPIO_ADC2_IN7,                /* PC1/A4 */
-  GPIO_ADC2_IN6,                /* PC0/A5 */
-};
-
-#endif  /* DEV2_PORT == 2 */
-#endif  /* DEV2_PORT */
-
-/****************************************************************************
- * Private Functions
- ****************************************************************************/
-
-/****************************************************************************
+/************************************************************************************
  * Public Functions
- ****************************************************************************/
+ ************************************************************************************/
 
 /************************************************************************************
  * Name: stm32_adc_setup
@@ -180,75 +106,37 @@ static const uint32_t g_pinlist2[3] =
 
 int stm32_adc_setup(void)
 {
-  static bool initialized = false;
-  FAR struct adc_dev_s *adc;
+  struct adc_dev_s *adc;
   int ret;
   int i;
 
-  /* Check if we have already initialized */
+  /* Configure the pins as analog inputs for the selected channels */
+  syslog(LOG_ERR, "stm32_adc_setup configuration: %d\n", ADC1_NCHANNELS);
 
-  if (!initialized)
+  for (i = 0; i < ADC1_NCHANNELS; i++)
     {
-      /* DEV1 */
-      /* Configure the pins as analog inputs for the selected channels */
+      stm32_configgpio(g_adc1_pinlist[i]);
+    }
 
-      for (i = 0; i < DEV1_NCHANNELS; i++)
-        {
-          stm32_configgpio(g_pinlist1[i]);
-        }
+  /* Call stm32_adcinitialize() to get an instance of the ADC interface */
 
-      /* Call stm32_adcinitialize() to get an instance of the ADC interface */
+  adc = stm32_adcinitialize(1, g_adc1_chanlist, ADC1_NCHANNELS);
+  if (adc == NULL)
+    {
+      aerr("ERROR: Failed to get ADC interface\n");
+      return -ENODEV;
+    }
 
-      adc = stm32_adcinitialize(DEV1_PORT, g_chanlist1, DEV1_NCHANNELS);
-      if (adc == NULL)
-        {
-          aerr("ERROR: Failed to get ADC interface 1\n");
-          return -ENODEV;
-        }
+  /* Register the ADC driver at "/dev/adc0" */
 
-      /* Register the ADC driver at "/dev/adc0" */
-
-      ret = adc_register("/dev/adc0", adc);
-      if (ret < 0)
-        {
-          aerr("ERROR: adc_register /dev/adc0 failed: %d\n", ret);
-          return ret;
-        }
-
-#ifdef DEV2_PORT
-
-      /* DEV2 */
-      /* Configure the pins as analog inputs for the selected channels */
-
-      for (i = 0; i < DEV2_NCHANNELS; i++)
-        {
-          stm32_configgpio(g_pinlist2[i]);
-        }
-
-      /* Call stm32_adcinitialize() to get an instance of the ADC interface */
-
-      adc = stm32_adcinitialize(DEV2_PORT, g_chanlist2, DEV2_NCHANNELS);
-      if (adc == NULL)
-        {
-          aerr("ERROR: Failed to get ADC interface 2\n");
-          return -ENODEV;
-        }
-
-      /* Register the ADC driver at "/dev/adc1" */
-
-      ret = adc_register("/dev/adc1", adc);
-      if (ret < 0)
-        {
-          aerr("ERROR: adc_register /dev/adc1 failed: %d\n", ret);
-          return ret;
-        }
-#endif
-
-      initialized = true;
-
+  ret = adc_register("/dev/adc0", adc);
+  if (ret < 0)
+    {
+      aerr("ERROR: adc_register failed: %d\n", ret);
+      return ret;
     }
 
   return OK;
 }
 
-#endif /* CONFIG_ADC && (CONFIG_STM32_ADC1 || CONFIG_STM32_ADC2) */
+#endif /* CONFIG_STM32_ADC1 */
