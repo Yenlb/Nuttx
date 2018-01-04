@@ -368,8 +368,10 @@
 
 /* DMA channels *************************************************************/
   /* ADC */
+//arch/arm/src/stm32/chip/stm32f40xxx_dma.h
+//arch/arm/src/stm32/stm32_adc.c
   
-#  define ADC1_DMA_CHAN DMACHAN_ADC1     /* DMA1_CH1 */
-#  define ADC2_DMA_CHAN DMACHAN_ADC2_1   /* DMA1_CH2 */
+#  define ADC1_DMA_CHAN DMAMAP_ADC1_1     	/* DMA1_CH1 */
+#  define ADC2_DMA_CHAN DMAMAP_ADC2_1   	/* DMA1_CH2 */
 
 #endif  /* __CONFIG_STM32F4DISCOVERY_INCLUDE_BOARD_H */
